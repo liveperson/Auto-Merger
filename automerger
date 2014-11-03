@@ -3,9 +3,6 @@
 # Startup script for Auto-Merger (redhat flavour)
 #
 # chkconfig: 345 85 15
-# description: redmine project manager
-# processname: redmine
-# pidfile: /var/run/redmine.pid
 
 # Source function library.
 . /etc/rc.d/init.d/functions
