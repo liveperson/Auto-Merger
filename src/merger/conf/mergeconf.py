@@ -51,10 +51,12 @@ CONFIGREADER                    = load_conf(ETC_CONF_FILEPATH, CONF_FILE_RELATIV
 BRANCHES_TO_EXCLUDE             = [ item[1] for item in sorted(CONFIGREADER.items('branches'), key=lambda branch: branch[1]) if item[0].startswith("branch-exclude")]
 BRANCHES_IN_CODE_FREEZE         = get_config(CONFIGREADER, 'branches', 'codefreeze-branches', default='').split(',')
 BRANCHES                        = [ item[1] for item in sorted(CONFIGREADER.items('branches'), key=lambda branch: branch[1]) if item[0].startswith("branch")]
-BASE_REPOSITORY_PATH            = get_config(CONFIGREADER, 'svn-repo', 'base-repository')
+BASE_REPOSITORY_PATH            = get_config(CONFIGREADER, 'svn-repo', 'base-repository').split(',')
+#BASE_REPOSITORY_PATH            = get_config(CONFIGREADER, 'svn-repo', 'base-repository')
 TMPDIR                          = get_config(CONFIGREADER, 'general', 'drive', default="") + get_config(CONFIGREADER,'general', 'tmpdir', default='/var/tmp')
 SVN_USERNAME                    = get_config(CONFIGREADER, 'svn-repo', 'username')
-SVN_PASSWORD                    = base64.decodestring(get_config(CONFIGREADER, 'svn-repo', 'pass'))
+SVN_PASSWORD                    = get_config(CONFIGREADER, 'svn-repo', 'pass')
+#SVN_PASSWORD                    = base64.decodestring(get_config(CONFIGREADER, 'svn-repo', 'pass'))
 REPO                            = get_config(CONFIGREADER, 'svn-repo', 'REPO')
 
 ##############################################
@@ -105,6 +107,7 @@ ISSUE_ID_NAME                   = get_config(CONFIGREADER, 'general', 'issue-id-
 ISSUE_ID_DEFAULT_VALUE          = get_config(CONFIGREADER, 'general', 'issue-default-value', default='0000')
 CODEREVIEW_NAME                 = get_config(CONFIGREADER, 'general', 'codereview-name', default='corereview')
 NOMERGE_KEY                     = 'NOMERGE'
+MERGE_KEY                       = 'MERGE'
 ORIG_AUTHOR                     = 'orig_author'
 ORIG_MESSAGE                    = 'orig_message'
 TMPL_COMMIT_LOG_MSG             = '%s/' + 'svn.commit.log.message.rev.%s.txt' # (tmpdir,rev)

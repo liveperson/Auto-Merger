@@ -35,6 +35,21 @@ import sys
 import urllib
 
 
+def get_branch_by_look2(svn_look_line, BRANCHES_MAP):
+    """
+        Example: for Branches/myapp/ver1/src/main/java/myfile.java will return Branches/myapp/ver1
+
+        Args:
+            svn_look_line: Will deduce the relevant branches and project for this svn look line.
+            BRANCHES_MAP: All projects with all their assigned branches.
+        Returns:
+            The branch path for the provided svn look line.
+    """
+    for branches_col in BRANCHES_MAP:
+        for branch in BRANCHES_MAP[branches_col]:
+            if svn_look_line.find(branch) != -1:
+                return branch
+
 def produce_merge(repository, revision):
     """
        This method is called after a user commits to svn repository.
@@ -56,7 +71,7 @@ def produce_merge(repository, revision):
     LOGGER.debug('lookcmd: ' + lookcmd)
     result = mergeconf.M_SHU.runshellcmd(lookcmd)
     LOGGER.debug('result: ' + result)
-    current_branch_name = svnutils.get_branch_by_look(result, mergeconf.BRANCHES_MAP)
+    current_branch_name = get_branch_by_look2(result, mergeconf.BRANCHES_MAP)
     
     
     # If the branch for which a commit just happended is not relevant to our branches.

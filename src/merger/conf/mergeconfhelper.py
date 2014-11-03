@@ -83,7 +83,9 @@ def get_branches_map(branchitems):
       branchitems: The list of branches to be analyzed.
     """
     branchesmap = {}
-    if len(branchitems) > 1:
+    logging.info('branchitems: ' + str(branchitems))
+    logging.info('branchitems len: ' + str(len(branchitems)))
+    if len(branchitems) > 0:
         for branches in sorted(branchitems):
             if (branches[0].startswith('branches-')):
                 branchesmap[branches[0]] = branches[1].split(',')

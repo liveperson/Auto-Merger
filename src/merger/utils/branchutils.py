@@ -38,7 +38,7 @@ from merge_messages import get_nextbranch_codefreeze_subject, \
     get_next_excluded_subject, get_next_excluded_text, get_auto_not_allowed_subject, \
     get_auto_not_allowed_text
 from merger.conf import mergeconf, mergeconfhelper
-from merger.conf.mergeconf import BRANCHES_TO_EXCLUDE, NOMERGE_KEY, \
+from merger.conf.mergeconf import BRANCHES_TO_EXCLUDE, NOMERGE_KEY, MERGE_KEY, \
     AUDIT_OP_MERGE, NA, AUDIT_EXPL_CODE_FREEZE, AUDIT_EXPL_EXCLUDED, \
     AUDIT_EXPL_AUTO_NOT_ALLOWED, KEY_REV_START, KEY_CURRENT_BRANCH, KEY_NEXT_BRANCH, \
     KEY_MESSAGE, KEY_FILES_TO_IGNORE, LOGGER, KEY_AUTHOR, KEY_AUTHORS_TO_IGNORE, \
@@ -117,10 +117,10 @@ def is_nomerge_key(revstart, current_branch, next_branch, message):
             True if no merge key was found otherwise false.
     """
     is_nomerge = False
-    if message.find(NOMERGE_KEY) != -1:
-        audit_write(AUDIT_OP_MERGE, NA, current_branch, next_branch, revstart, revstart, NA, NA, NOMERGE_KEY)
+    if message.find(MERGE_KEY) == -1:
+        audit_write(AUDIT_OP_MERGE, NA, current_branch, next_branch, revstart, revstart, NA, NA, MERGE_KEY)
         mergeconf.LOGGER.debug(
-                NOMERGE_KEY + ' keyword found in commit, not merging from ' + current_branch + ' to: ' + next_branch + ' revision: ' + revstart
+                MERGE_KEY + ' keyword not found in commit, not merging from ' + current_branch + ' to: ' + next_branch + ' revision: ' + revstart
         )
         is_nomerge = True
     return is_nomerge

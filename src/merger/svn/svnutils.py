@@ -43,16 +43,17 @@ CLEANUP_TMPL                = 'svn cleanup %s/%s --username %s --password %s'
 REVERT_TMPL                 = 'svn revert -R %s/%s --username %s --password %s'
 UPDATE_TMPL                 = 'svn update --force %s/%s --username %s --password %s'
 CO_TMPL                     = 'svn co %s %s/%s --force --username %s --password %s'
-MERGE_TMPL                  = '''svn merge --non-interactive -r %s:%s %s %s/%s 
-                                + '--username %s --password %s'''
+MERGE_TMPL                  = 'svn merge --non-interactive -r %s:%s %s %s/%s --username %s --password %s'
 LOG_TMPL                    = 'svn log %s -r %s:%s'
 LOG_URL_TMP                 = 'svn log -v %s -r %s:%s --username %s --password %s %s %s'
 LOOK_CHANGED_TMPL           = 'svnlook changed --revision %s %s'
 LOOK_AUTH_TMPL              = 'svnlook author --revision %s %s'
 LOOK_LOG_TMPL               = 'svnlook log --revision %s %s'
+INFO_TMPL                   = 'svn info --non-interactive %s --username %s --password %s'
 
 MESSAGE_ABORT_COMMIT        = 'Aborting commit'
 MESSAGE_SUCCESSFUL_COMMIT   = 'Committed revision'
+MESSAGE_URL_DOES_NOT_EXIST  = 'Not a valid URL'
 
 
 def get_commit_log_message(repo, rev):
@@ -161,19 +162,27 @@ class SVNUtils:
                 we will use this rev for its naming convention.
         Returns: The message response from svn server.
         """
-        mergeconf.LOGGER.debug("Committing file/dir %s with message %s" % 
-                               (fileordir_to_commit, message))
+	mergeconf.LOGGER.debug('Committing File; tmpdir: ' + self.tmpdir );
+#        mergeconf.LOGGER.debug("Committing file/dir %s with message %s" % 
+#                               (fileordir_to_commit, message))
         message_file_name = TMPL_COMMIT_LOG_MSG % (self.tmpdir, rev)
+	mergeconf.LOGGER.debug('Committing File; message_file_name: ' + message_file_name );
         message_file_name_org = message_file_name + '.org'
-        mergeconf.LOGGER.debug("Creating message file: %s" % 
-                               (message_file_name_org))
+	mergeconf.LOGGER.debug('Committing File;  message_file_name_org: ' +  message_file_name_org );
+#        mergeconf.LOGGER.debug("Creating message file: %s" % 
+#                               (message_file_name_org))
         message_file = open(message_file_name_org, 'w')
         try:
             message_file.write(message)
             message_file.close()
-            svn_commit_merged_cmd = (COMMIT_TMPL % 
-                                     (fileordir_to_commit, message_file_name, 
-                                      self.username, self.password))
+	    mergeconf.LOGGER.debug('Committing File; COMMIT_TMPL: ' + COMMIT_TMPL );
+	    mergeconf.LOGGER.debug('Committing File; fileordir_to_commit: ' + fileordir_to_commit );
+	    mergeconf.LOGGER.debug('Committing File; message_file_name: ' + message_file_name );
+	    mergeconf.LOGGER.debug('Committing File; self.username: ' + self.username );
+	    mergeconf.LOGGER.debug('Committing File; self.password: ' + self.password );
+            svn_commit_merged_cmd = COMMIT_TMPL % (fileordir_to_commit, message_file_name, self.username, self.password)
+	    mergeconf.LOGGER.debug('Committing File; svn_commit_merged_cmd: ' + svn_commit_merged_cmd );
+#            mergeconf.LOGGER.debug('message_file_name_org: ' + message_file_name_org)
             initial_msg_file = open(message_file_name_org, 'rb')
             msg_file = open(message_file_name, 'wb')
             for line in initial_msg_file:
@@ -183,8 +192,9 @@ class SVNUtils:
                     msg_file.write(line + '\n')
             initial_msg_file.close()
             msg_file.close()
+#            mergeconf.LOGGER.debug('svn_commit_merged_cmd' + svn_commit_merged_cmd)
             result = self.shellutils.runshellcmd(svn_commit_merged_cmd)
-            mergeconf.LOGGER.debug(svn_commit_merged_cmd)
+#            mergeconf.LOGGER.debug(svn_commit_merged_cmd)
         finally:
             os.remove(message_file_name)
         mergeconf.LOGGER.debug('returning result: ' + result)
@@ -251,6 +261,14 @@ class SVNUtils:
         mergeconf.LOGGER.debug('merge cmd: : ' + svn_merge_cmd)
         return rev_as_str
 
+    def does_url_exist(self,url):
+        mergeconf.LOGGER.debug('does_url_exist; url:'+ url)
+        svn_info_cmd = INFO_TMPL % (url, self.username, self.password)
+        mergeconf.LOGGER.debug('does_url_exist; svn_info_cmd:' + svn_info_cmd)
+        info_result  = M_SHU.runshellcmd(svn_info_cmd)
+        mergeconf.LOGGER.debug('does_url_exist; info_result:' + info_result)
+        return info_result.find(MESSAGE_URL_DOES_NOT_EXIST) == -1
+
 def get_branch_dir(branch_name):
     """
         Extract branch directory to do local temporal work form branch name.
@@ -298,17 +316,6 @@ def get_branch_by_look(svn_look_line, BRANCHES_MAP):
         for branch in BRANCHES_MAP[branches_col]:
             if svn_look_line.find(branch) != -1:
                 return branch
-
-def get_branch_url(name):
-    """
-        Based on a branch name give its full url into svn.
-
-        Args:
-            name: The branch name (as provided in configuration branches).
-        Returns:
-            The branch full svn url.
-    """
-    return mergeconf.BASE_REPOSITORY_PATH + '/' + name 
 
 def get_next_branch(svn_look_line, branches_map):
     """
