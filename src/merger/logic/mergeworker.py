@@ -44,7 +44,7 @@ from merger.utils.merge_messages import get_failed_mergecommit_subject, \
     get_failed_mergecommit_text, get_merge_success_subject, get_merge_success_text
 from merger.utils.spreadsheet import add_row
 import os.path
-import re
+import re,traceback
 
 """
 Receives a merge work unit, processes it.
@@ -122,6 +122,7 @@ def get_author(rev, repo, message):
         Returns:
             The name of the committer we we perform the merge for.
     """
+    mergeconf.LOGGER.debug ('get_author message:' + message)
     if (message and message.find(ORIG_AUTHOR) != -1):
         message = message.replace('\r', '')
         orig_authors = re.compile(r"^orig_author: (.*?)$", re.MULTILINE).search(message).groups()
@@ -153,6 +154,7 @@ def deduce_current_branch(merge_item):
     lookresult = M_SHU.runshellcmd(lookcmd)
     mergeconf.LOGGER.debug('result: ' + lookresult)
     if merge_item.get(KEY_SOURCE_BRANCH_NAME, None) is None:
+    	mergeconf.LOGGER.debug('KEY_SOURCE_BRANCH_NAME: ' + KEY_SOURCE_BRANCH_NAME)
         current_branch = get_branch_by_look(lookresult, mergeconf.BRANCHES_MAP)
     else:
         current_branch = merge_item.get(mergeconf.KEY_SOURCE_BRANCH_NAME, None)
@@ -259,6 +261,7 @@ class MergeWorker():
         mergeconf.LOGGER.debug('Committing merged code...')
         commit_message = mergeconf.ISSUE_ID_NAME + ': ' + mergeconf.ISSUE_ID_DEFAULT_VALUE + '\n' + mergeconf.CODEREVIEW_NAME + \
             ': ' + NA + '\n' + ORIG_AUTHOR + ': ' + author + '\n' + ORIG_MESSAGE + ': ' + message
+        mergeconf.LOGGER.debug('commit_message: ' + commit_message)
         commit_merge_result = self.svn_utils.commit(TMPDIR + '/' + svnutils.get_branch_dir(merge_to_branch), commit_message, revstart)
         mergeconf.LOGGER.debug('is aborting found? ' + str(commit_merge_result.find(MESSAGE_ABORT_COMMIT)))
         
@@ -268,11 +271,15 @@ class MergeWorker():
             handle_success_merge(revstart, revend, current_branch_name, next_branch_name, message, author, rev_as_str, commit_message, commit_merge_result)
             return True
 
-
-
-
-
-
+    def get_branch_url(self, name):
+        mergeconf.LOGGER.debug ('get_branch_url; name:' + name);
+        for base_url in mergeconf.BASE_REPOSITORY_PATH:
+           mergeconf.LOGGER.debug ('get_branch_url; base_url:' + base_url);
+           full_url = base_url + '/' + name
+           mergeconf.LOGGER.debug ('get_branch_url; full_url:' + full_url);
+           if (self.svn_utils.does_url_exist(full_url)):
+              return full_url        
+        return None
 
 
     def do_merge(self, merge_item):
@@ -300,19 +307,26 @@ class MergeWorker():
         try:
             log_prefix_desc(merge_item)
             merge_item[KEY_CURRENT_BRANCH], merge_item[KEY_LOOK_RESULT] = deduce_current_branch(merge_item) 
+            mergeconf.LOGGER.debug ('merge_item[KEY_CURRENT_BRANCH]' + str(merge_item[KEY_CURRENT_BRANCH]));
+            mergeconf.LOGGER.debug ('merge_item[KEY_LOOK_RESULT]' + str(merge_item[KEY_LOOK_RESULT]));
             if not is_relevant_branch(merge_item[KEY_REV_START], merge_item[KEY_CURRENT_BRANCH]): 
                 return
 
             mergeconf.LOGGER.debug('current_branch: ' + merge_item[KEY_CURRENT_BRANCH])
             merge_item[KEY_NEXT_BRANCH] = branchutils.get_next_branch(merge_item[KEY_LOOK_RESULT], mergeconf.BRANCHES_MAP)
+            mergeconf.LOGGER.debug('next_branch: ' + merge_item[KEY_NEXT_BRANCH])
 
             if not is_next_branch_relevant(merge_item[KEY_REV_START], merge_item[KEY_CURRENT_BRANCH], merge_item[KEY_NEXT_BRANCH]): 
                 return
 
-            merge_item[KEY_CURRENT_BRANCH_URL] = branchutils.get_branch_url(merge_item[KEY_CURRENT_BRANCH])
-            merge_item[KEY_NEXT_BRANCH_URL] = branchutils.get_branch_url(merge_item[KEY_NEXT_BRANCH])
-            mergeconf.LOGGER.debug ('result: %s' % merge_item[KEY_LOOK_RESULT])
+            merge_item[KEY_CURRENT_BRANCH_URL] = self.get_branch_url(merge_item[KEY_CURRENT_BRANCH])
+            mergeconf.LOGGER.debug ('result: ' + str(merge_item[KEY_CURRENT_BRANCH_URL]))
+            merge_item[KEY_NEXT_BRANCH_URL] = self.get_branch_url(merge_item[KEY_NEXT_BRANCH])
+#            mergeconf.LOGGER.debug ('result: %s' % merge_item[KEY_LOOK_RESULT])
             merge_item[KEY_MESSAGE] = svnutils.get_commit_log_message(merge_item[KEY_REPO], merge_item[KEY_REV_START])
+            mergeconf.LOGGER.debug('result: ' + merge_item[KEY_REV_START])
+            mergeconf.LOGGER.debug('result: ' + merge_item[KEY_REPO])
+            mergeconf.LOGGER.debug('result: ' + merge_item[KEY_MESSAGE])
             merge_item[KEY_AUTHOR] = get_author(merge_item[KEY_REV_START], merge_item[KEY_REPO], merge_item[KEY_MESSAGE])
             merge_item[KEY_FILES_TO_IGNORE] = mergeconf.FILES_TO_IGNORE
             merge_item[KEY_AUTHORS_TO_IGNORE] = mergeconf.AUTHORS_TO_IGNORE
@@ -324,7 +338,8 @@ class MergeWorker():
             self.commit_merged_code(merge_item[mergeconf.KEY_REV_START], merge_item.get(mergeconf.KEY_REV_END, None), merge_item[KEY_CURRENT_BRANCH], merge_item[KEY_NEXT_BRANCH], merge_item[KEY_MESSAGE] + '\n' + merge_item[KEY_LOOK_RESULT], merge_item[KEY_AUTHOR],
                                     merge_to_branch, rev_as_str)
         except:
-            mergeconf.LOGGER.exception("failed performing merge please see further details")
+#            mergeconf.LOGGER.exception("failed performing merge please see further details")
+            traceback.print_exc()
             audit_write(AUDIT_OP_MERGE, merge_item[KEY_AUTHOR], merge_item[KEY_CURRENT_BRANCH],
                         merge_item[KEY_NEXT_BRANCH], merge_item[mergeconf.KEY_REV_START], merge_item[mergeconf.KEY_REV_START],
                         NA, NA, AUDIT_EXPL_EXCEPTION)

@@ -1,0 +1,47 @@
+#!/bin/sh
+#
+# Startup script for Auto-Merger (redhat flavour)
+#
+# chkconfig: 345 85 15
+
+# Source function library.
+. /etc/rc.d/init.d/functions
+
+program="Auto-Merger"
+
+program_home="/services/Auto-Merger"
+[ -d ${program_home} ] || exit 0
+PIDFILE="/var/run/${program}.pid"
+LOCKFILE="/var/lock/subsys/${program}"
+
+# See how we were called.
+case "$1" in
+  start)
+        echo -n "Starting ${program} ..."
+        #### Commands to start the process running
+        nohup /bin/su - root -c "python ${program_home}/src/main.py" 2>&1 &
+        sleep 1
+        echo `pgrep -f  "python ${program_home}/src/main.py"` > ${PIDFILE}
+        touch ${LOCKFILE}
+        echo
+        ;;
+  stop)
+        echo -n "Shutting down ${program} ..."
+        killproc -p ${PIDFILE} /etc/init.d/${program}
+        echo
+        rm -f ${LOCKFILE}
+        rm -f ${PIDFILE}
+        ;;
+  status)
+	status ${program}
+        ;;
+  restart)
+        $0 stop
+        $0 start
+        ;;
+  *)
+        echo "Usage: $0 {start|stop|restart|status}"
+        exit 1
+esac
+
+exit 0
